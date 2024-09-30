@@ -1,0 +1,28 @@
+---
+title: "BUDA525Final"
+output: html_document
+Team Members: Kristen Hopkins, Jacob Sossamon, Taggart Shea
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 3 (30 Points)
+
+In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
+
+```{r}
+library(ISLR)
+head(Credit)
+```
+
+## Problem 4 (30 Points)
+
+The `Salaries` data in the `carData` package contains information on academic salaries in 2008 and 2009 in a college in the US. A data dictionary can be found in the `help` file for the data. This data was collected as part of an on-going effort of the college to monitor salary differences between male and female faculty members. We have been asked to investigate the gender gap in the data, but also what other information that may be relevant to administrators (i.e. salary growth for years of service, discipline based growth, etc). Investigate if there is a gender gap, but also provide insights on other drivers that you may see of salary in the data. Is your model suitable to make offers based on the information provided? Explain your reasoning. Provide insights into any other information you find of interest.
+
+```{r}
+library(carData)
+head(Salaries)
+```
+
