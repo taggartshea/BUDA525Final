@@ -8,6 +8,8 @@ Team Members: Kristen Hopkins, Jacob Sossamon, Taggart Shea
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## This is a test- Kristen
+
 ## Problem 3 (30 Points)
 
 In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
