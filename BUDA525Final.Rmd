@@ -2,6 +2,8 @@
 title: "BUDA525Final"
 output: html_document
 Team Members: Kristen Hopkins, Jacob Sossamon, Taggart Shea
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -12,12 +14,135 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Problem 3 (30 Points)
 
-In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
+#In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
+
+Exploring the data
 
 ```{r}
 library(ISLR)
+data("Credit")
+help(Credit)
 head(Credit)
+summary(Credit)
+plot(Credit)
 ```
+
+From plotting the credit data, we can immediately see that the rating, limit, and income variables are all visibly correlated with balance. The variables like studet and married are harder to tell just from a plot because they are factor variables. We are going to remove the ID, Gender, and Etnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be biased against gender or ethnicity, so its best to just leave them out completely.
+
+It is also possible that some of the variables may need transformed such as the limit and balance variables where there is a very wide range of values.
+
+```{r}
+attach(Credit)
+```
+
+Removing unwanted columns and adding 1 to the balance fields so there are no 0's for transformations
+
+```{r}
+Credit <- subset(Credit, select = -c(Ethnicity, Gender, ID))
+
+Credit$Balance <- Credit$Balance + 1
+
+summary(Credit)
+```
+
+Performing backwards elimination with AIC:
+
+Default Model
+
+```{r}
+#model using ALL predictor variables
+mod1 <- lm(Balance~.,data=Credit)
+
+#backwards selection on model 1
+mod1S <- step(mod1)
+
+summary(mod1S)
+```
+
+Gives us an AIC of 3679.9
+
+Examples of potential transformation that would help residuals
+
+```{r}
+plot(Balance~Rating)
+plot(log(Balance)~log(Rating))
+
+plot(Balance~Limit)
+plot(log(Balance)~log(Limit))
+
+plot(Balance~Income)
+plot(log(Balance)~log(Income))
+```
+
+Transformed Models
+
+```{r}
+#Model using ALL variables, but log transformations for limit, rating, and Income, and sqrt transformation for Balance
+mod2 <- lm(log(Balance)~log(Limit)+log(Rating)+log(Income)+Education+Age+Married, data=Credit)
+
+#Model using ALL variables, but log transformations for only Income (suggested by the powertransform function)
+mod2b <- lm(Balance~Limit+Rating+log(Income)+Education+Age+Married, data=Credit)
+
+#backwards selection on both transformed models
+mod2S <- step(mod2)
+mod2bS <- step(mod2b)
+
+summary(mod2S)
+summary(mod2bS)
+```
+
+Gives us an AIC of 181.19 and 4160.6
+
+Polynomial Model
+```{r}
+#model using polynomial continuous variables
+mod3 <- lm(Balance~poly(Income+Limit+Rating+Cards+Age+Education, 2, raw=TRUE), data=Credit)
+
+#backwards selection on model 3
+mod3S <- step(mod3)
+
+summary(mod3S)
+```
+
+Gives us an AIC of 4365.4
+
+Comparing all of the residual plots
+
+```{r}
+#the default model
+par(mfrow=c(2,2))
+plot(mod1S)
+
+#Model with log transformation of Balance, Income, Rating, and Limit
+par(mfrow=c(2,2))
+plot(mod2S)
+
+#Model with log transformation of just Income
+par(mfrow=c(2,2))
+plot(mod2bS)
+
+#Polynomial Model
+par(mfrow=c(2,2))
+plot(mod3S)
+```
+
+summary:
+
+The default model after backwards elimination had an AIC of **3679.9** and its residual plot looks very bad showing significant curvature.
+
+The second model, using log transformation of balance, income, rating, and limit, after backwards elimination had an AIC of **181.19** and its residual plot looks very bad as well.
+
+The other variation of the second model using the log transformation of just income, after backwards elimination had an AIC of **4160.6** and its residual plot looks a little better with a tighter spread and flatter line.
+
+Finally, the third model, using polynomial regression, after backwards elimination had an AIC of **4365.4** and the best looking residual plot, appearing closest to a null plot just with a strange sloped line of residuals near the lower fitted values.
+
+
+Interpretation:
+
+ssssss
+
+
+
 
 ## Problem 4 (30 Points)
 
@@ -27,4 +152,3 @@ The `Salaries` data in the `carData` package contains information on academic sa
 library(carData)
 head(Salaries)
 ```
-
