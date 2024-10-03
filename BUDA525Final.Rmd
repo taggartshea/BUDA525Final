@@ -16,7 +16,6 @@ knitr::opts_chunk$set(echo = TRUE)
 #In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
 
 Exploring the data
-
 ```{r}
 library(ISLR)
 data("Credit")
@@ -25,120 +24,144 @@ head(Credit)
 summary(Credit)
 plot(Credit)
 ```
+From plotting the credit data, we can immediately see that the rating and limit appear to be visibly positively correlated with balance. There could be some multicollinearity concerns though, with having both the limit and rating variables in the model, since they look almost perfectly correlated with each other. This is understandable since if someone tends to have a higher credit score they usually get a higher limit and vice versa.
 
-From plotting the credit data, we can immediately see that the rating, limit, and income variables are all visibly correlated with balance. The variables like student and married are harder to tell just from a plot because they are factor variables. We are going to remove the ID, Gender, and Etnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be biased against gender or ethnicity, so its best to just leave them out completely.
+We are going to remove the ID, Gender, and Ethnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be already biased against gender or ethnicity, so its best to just leave them out completely.
 
 It is also possible that some of the variables may need transformed such as the limit and balance variables where there is a very wide range of values.
+
+Seeing how many balances are averaged at 0 and viewing the distribution of balances.
+```{r}
+hist(Credit$Balance)
+
+nrow(Credit[Credit$Balance == 0,])
+```
+As you can see, almost a quarter of the data set has balances with values of 0. As a result, we are going to exclude all of the averaged out balances with values of 0 since the large number of these present in our data could negatively impact our models and skew results. It is intuitive to exclude these balances because a credit card company would most likely be interested in knowing the average balances across their frequent users, not ones who have not used their cards in a significant amount of time, leading them to have averaged out balances of 0 for the period.
 
 ```{r}
 attach(Credit)
 ```
 
-Removing unwanted columns and adding 1 to the balance fields so there are no 0's for transformations
-
+Removing unwanted columns and removing all of the balances with 0.
 ```{r}
 Credit <- subset(Credit, select = -c(Ethnicity, Gender, ID))
 
-Credit$Balance <- Credit$Balance + 1
+Credit <- Credit[Credit$Balance > 0, ]
 
-summary(Credit)
+attach(Credit)
+
+hist(Credit$Balance)
 ```
 
 Performing backwards elimination with AIC:
 
-Default Model
-
+Default Model (all predictor variables, no transformations)
 ```{r}
 #model using ALL predictor variables
-mod1 <- lm(Balance~.,data=Credit)
+mod1 <- lm(Balance~Income+Limit+Rating+Cards+Age+Education+Student+Married)
 
 #backwards selection on model 1
 mod1S <- step(mod1)
 
 summary(mod1S)
 ```
+Gives us an AIC of 1462.3 and uses all variables except education. All variables are significant at the .05 level or better except for Married at 0.1. The adjusted r squared value is 0.99
 
-Gives us an AIC of 3679.9
-
-Examples of potential transformation that would help residuals
-
+Using an automatic selection of transformation and boxCox to see if any log transformations would help our model.
 ```{r}
-plot(Balance~Rating)
-plot(log(Balance)~log(Rating))
+library(car)
 
-plot(Balance~Limit)
-plot(log(Balance)~log(Limit))
+summary(powerTransform(cbind(Balance,Rating,Limit,Income,Cards,Age,Education)))
 
-plot(Balance~Income)
-plot(log(Balance)~log(Income))
+boxCox(mod1S)
 ```
+This tells us that no log transformations would improve our model.
 
-Transformed Models
-
+Looking at the residuals
 ```{r}
-#Model using ALL variables, but log transformations for limit, rating, and Income, and log transformation for Balance
-mod2 <- lm(log(Balance)~log(Limit)+log(Rating)+log(Income)+Education+Age+Married, data=Credit)
-
-#Model using ALL variables, but log transformations for only Income (suggested by the powertransform function)
-mod2b <- lm(Balance~Limit+Rating+log(Income)+Education+Age+Married, data=Credit)
-
-#backwards selection on both transformed models
-mod2S <- step(mod2)
-mod2bS <- step(mod2b)
-
-summary(mod2S)
-summary(mod2bS)
-```
-
-Gives us an AIC of 181.19 and 4160.6
-
-Polynomial Model
-```{r}
-#model using polynomial continuous variables
-mod3 <- lm(Balance~poly(Income+Limit+Rating+Cards+Age+Education, 2, raw=TRUE), data=Credit)
-
-#backwards selection on model 3
-mod3S <- step(mod3)
-
-summary(mod3S)
-```
-
-Gives us an AIC of 4365.4
-
-Comparing all of the residual plots
-
-```{r}
-#the default model
+#the backwards elimination model
 par(mfrow=c(2,2))
 plot(mod1S)
-
-#Model with log transformation of Balance, Income, Rating, and Limit
-par(mfrow=c(2,2))
-plot(mod2S)
-
-#Model with log transformation of just Income
-par(mfrow=c(2,2))
-plot(mod2bS)
-
-#Polynomial Model
-par(mfrow=c(2,2))
-plot(mod3S)
 ```
+
+Removing one of the highly correlated variables (rating and limit), in this case we decided to drop credit rating
+```{r}
+mod2 <- lm(Balance~Income+Limit+Cards+Age+Student+Married) 
+
+summary(mod2)
+```
+The output of this model seems to be very similar to the one, just with the coefficients slightly different, and this time married has more significance on the model. The standard errors are also slightly less. Hopefully by removing one of the highly correlated variables, the model will have better interpretability and more reliable coefficient estimates.
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod2)
+```
+Trying to clean up the residual plots even more (data point 247 and 192 have very high balances, could be throwing off plot a little)
+```{r}
+Credit[247,]
+Credit[192,]
+
+Credit <- Credit[-247,]
+Credit <- Credit[-192,]
+```
+fitting model after removing those two rows
+```{r}
+attach(Credit)
+
+mod3 <- lm(Balance~Income+Limit+Cards+Age+Student+Married) 
+
+summary(mod3)
+```
+The residual spread went from -34.4 - 23.9 to -28.2 - 23.9 by removing those two points (not necessary but we thought we might as well experiment)
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod3)
+```
+
+```{r}
+residualPlot(mod2)
+residualPlot(mod3)
+```
+you can see the two points in the bottom right corner went away in the second plot which improved the slight curve of the line we had before.
+
+Seeing if we can remove even more predictor variables to have a simpler model
+```{r}
+#Submodel without Age and Married variables
+mod4 <- lm(Balance~Income+Limit+Cards+Student)
+
+anova(mod4,mod3)
+```
+Based on the anova table comparing model 4 and model 3, we see that we can reject the null hypothesis of the simpler model being better in this case because the p value is very small, thus telling us that the Student and Married variables should stay in the model.
 
 summary:
 
-The default model after backwards elimination had an AIC of **3679.9** and its residual plot looks very bad showing significant curvature.
-
-The second model, using log transformation of balance, income, rating, and limit, after backwards elimination had an AIC of **181.19** and its residual plot looks very bad as well.
-
-The other variation of the second model using the log transformation of just income, after backwards elimination had an AIC of **4160.6** and its residual plot looks a little better with a tighter spread and flatter line.
-
-Finally, the third model, using polynomial regression, after backwards elimination had an AIC of **4365.4** and the best looking residual plot, appearing closest to a null plot just with a strange sloped line of residuals near the lower fitted values.
-
+We chose to use backwards elimination to select the best predictors for our model. it provided us with a model that used Income, Limit, Rating, Cards, Age, Student, and Married. We then manually removed Rating since Limit essentially accounts for all that Rating offers. We then took away two potential influence points to clean up our residuals even more to give us our final model. Finally we tested if we could simplify the model any further by removing two variables and found that we should not.
 
 Interpretation:
 
-Model 2 has the lowest AIC score which means it is a good fit for our data, but maybe not as complex as we want it to be. Because the residuals are not the best on this model, we probably will want to use the thrid model to make our predictions, due to the absence of NCV and our curves being flat.
+```{r}
+summary(mod3)
+```
+Our model allows us to view the influential factors that effect credit card balances for this particular set of data. We can also see what specific effects the predictor variables have on balance by looking at the coefficients. The income variable has a negative correlation on balance, which seems somewhat counter-intuitive because we would assume the more income you have, the more you would spend leading to higher average credit card balances. But this model predicts a lower balance, the higher a persons income. Next we have Limit, where a higher credit limit results in a higher card balance. This definitely makes sense to us, the higher your limit the more you can spend. For the card variable, our model tells us that the more cards someone has, the higher their average card balance will be. For age, the older the person is, the less their balance will be, indicating that younger people tend to spend more on average. The final two variables tell us that students generally have higher card balances and that married people tend to have lower balances. This one could be due to a married couple dividing their total household spending among two people.
+
+Prediction example:
+
+To test our model we are going to predict a card balance for someone that: 
+Has $100,000 income
+An $8,000 credit limit
+2 Cards
+Is 35 years old
+Is not a student
+Is not Married
+```{r}
+predict(mod3,newdata=data.frame(Income=100, Limit=8000, Cards=2, Age=35, Student="No", Married="No"))
+```
+The model predicts that this individual would have an averaged out credit card balance of $927.1 for the period.
+
+
+
+
 
 
 
@@ -150,7 +173,6 @@ The `Salaries` data in the `carData` package contains information on academic sa
 Exploring the data
 ```{r}
 library(carData)
-library(car)
 data("Salaries")
 help(Salaries)
 summary(Salaries)
@@ -208,7 +230,13 @@ mod5S <- step(mod5)
 
 summary(mod5S)
 ```
-The result of the backwards elimination shows that the sex variable is not needed and that the other 4 variables are better predictors of salary.
+
+Analyzing the impact of the sex variable using anova
+```{r}
+anova(mod5,mod5S)
+```
+
+The result of the backwards elimination and the anova table shows that the sex variable is not needed and that the other 4 variables are better predictors of salary. The sex variable does not significantly improve the model's ability to explain variance in salary when rank, discipline, yrs.since.phd, and yrs.service are already accounted for.
 
 Checking the residuals
 ```{r}
