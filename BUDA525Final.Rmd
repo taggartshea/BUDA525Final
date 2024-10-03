@@ -27,7 +27,7 @@ summary(Credit)
 plot(Credit)
 ```
 
-From plotting the credit data, we can immediately see that the rating, limit, and income variables are all visibly correlated with balance. The variables like studet and married are harder to tell just from a plot because they are factor variables. We are going to remove the ID, Gender, and Etnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be biased against gender or ethnicity, so its best to just leave them out completely.
+From plotting the credit data, we can immediately see that the rating, limit, and income variables are all visibly correlated with balance. The variables like student and married are harder to tell just from a plot because they are factor variables. We are going to remove the ID, Gender, and Etnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be biased against gender or ethnicity, so its best to just leave them out completely.
 
 It is also possible that some of the variables may need transformed such as the limit and balance variables where there is a very wide range of values.
 
@@ -77,7 +77,7 @@ plot(log(Balance)~log(Income))
 Transformed Models
 
 ```{r}
-#Model using ALL variables, but log transformations for limit, rating, and Income, and sqrt transformation for Balance
+#Model using ALL variables, but log transformations for limit, rating, and Income, and log transformation for Balance
 mod2 <- lm(log(Balance)~log(Limit)+log(Rating)+log(Income)+Education+Age+Married, data=Credit)
 
 #Model using ALL variables, but log transformations for only Income (suggested by the powertransform function)
@@ -139,7 +139,7 @@ Finally, the third model, using polynomial regression, after backwards eliminati
 
 Interpretation:
 
-ssssss
+Model 2 has the lowest AIC score which means it is a good fit for our data, but maybe not as complex as we want it to be. Because the residuals are not the best on this model, we probably will want to use the thrid model to make our predictions, due to the absence of NCV and our curves being flat.
 
 
 
