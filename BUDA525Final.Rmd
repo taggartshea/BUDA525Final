@@ -208,12 +208,26 @@ data("Salaries")
 help(Salaries)
 summary(Salaries)
 head(Salaries)
+plot(Salaries)
 ```
 Some potential concerns right away that we see from the data set is that there are 358 male observations and only 39 female. Also there is a lot more observations with 'professor' ranks at 266 than 'assistant' and 'associate professor' at 67 and 64 in the data set.
+
+Another concern could be with the strong correlation between yrs.service and yrs.since.phd, suggesting multicolinearity could be an issue like with the previous problem, if both of these variables are left in the model.
 
 ```{r}
 attach(Salaries)
 ```
+
+
+```{r}
+par(mfrow=c(1,3))
+plot(salary~rank)
+plot(salary~discipline)
+plot(salary~sex)
+```
+Here we can see the pay differences between the 3 ranks, the 2 disciplines, and gender
+
+Investigating the gender gap:
 
 Splitting data into different subsets
 ```{r}
@@ -233,70 +247,154 @@ Females <- SalariesSex$Female
 
 Calculating the means of each rank by sex
 ```{r}
-cat("Professors","\n")
-tapply(Professors$salary,Professors$sex,mean)
-cat("\n","Assistant Professors","\n")
+cat("Assistant Professors","\n")
 tapply(AsstProfessors$salary,AsstProfessors$sex,mean)
+
 cat("\n","Associate Professors","\n")
 tapply(AssocProfessors$salary,AssocProfessors$sex,mean)
-```
-The results of these calculations provide interesting results. They show that there is at least a $3,000 difference between the averages of male salaries and female salaries in each of the 3 ranks, indicating a gender pay gap may be present.
 
-Creating a model using only sex as a predictor
+cat("\n","Professors","\n")
+tapply(Professors$salary,Professors$sex,mean)
+```
+The results of these calculations provide interesting results. They show that there is at least a $3,000 difference between the averages of male salaries and female salaries in each of the 3 ranks, indicating a gender pay gap may be present. You can see this visually in the 3 boxplots below.
+
 ```{r}
-mod4 <- lm(salary~sex, data=Salaries)
-
-summary(mod4)
+par(mfrow=c(1,3))
+plot(AsstProfessors$salary~AsstProfessors$sex)
+plot(AssocProfessors$salary~AssocProfessors$sex)
+plot(Professors$salary~Professors$sex)
 ```
-Again we see that from this model, it predicts on average males would make $14,088 more than females, and that the sex variable is statistically significant. However, the model only explains a little less than 2% of the total variation with an adjusted r squared score of 0.01673.
+
+Creating a model using a sex and rank interaction as the predictor
+```{r}
+mod5 <- lm(salary~sex*rank, data=Salaries)
+
+summary(mod5)
+```
+Again we see that from this model that its estimates are that in every rank, males make more in comparison to females.
 
 Performing a t-test hypothesis test similar to the model we just looked at
 ```{r}
 t.test(Salaries$salary[Salaries$sex=="Male"], Salaries$salary[Salaries$sex=="Female"], alternative="greater")
 ```
-The t-test shows the same result as the model we just created, where males on average have $14,088 higher salaries than females. The hypothesis test tells us that if the null hypothesis were true and there was no real difference between male and female salaries, the probability of observing a value as extreme as our data would be 0.001, indicating we should reject the null hypothesis and recognize the higher average salary of males in this case.
+The t-test shows that males on average have $14,088 higher salaries than females. The hypothesis test tells us that if the null hypothesis were true and there was no real difference between male and female salaries, the probability of observing a value as extreme as our data would be 0.001, indicating we should reject the null hypothesis and recognize the higher average salary of males in this case.
 
+Interpretation: 
 
-Using backwards elimination to find the recommended number of predictor variables based on AIC
-```{r}
-mod5 <- lm(salary~.,data=Salaries)
-mod5S <- step(mod5)
+Looking at the means, boxplots, regression model, and t-test, we would say that a gender gap does indeed exist within this data. This discrepancy persists even when the different ranks of the faculty members are taken into account. There was a visible salary gap between male and female faculty in the Assistant Professor, Associate Professor, and Professor ranks.
 
-summary(mod5S)
-```
-
-Analyzing the impact of the sex variable using anova
-```{r}
-anova(mod5,mod5S)
-```
-
-The result of the backwards elimination and the anova table shows that the sex variable is not needed and that the other 4 variables are better predictors of salary. The sex variable does not significantly improve the model's ability to explain variance in salary when rank, discipline, yrs.since.phd, and yrs.service are already accounted for.
-
-Checking the residuals
-```{r}
-par(mfrow=c(2,2))
-plot(mod5S, main="mod5", col.main="#002855", col = "#EAAA00", col.lab="#002855")
-```
 
 
 Looking at other factors:
 
-
-Checking if there is a promotion discrepancy by creating models for predicting the number of years someone has been there to what rank they are, by sex
+Investigating if there is a promotion discrepancy by creating two models for predicting the number of years someone has been there based on what rank they are, by sex
 ```{r}
 #for Males
-mod7 <- lm(Males$yrs.service~Males$rank)
+mod6 <- lm(Males$yrs.service~Males$rank)
 
 #for Females
-mod7b <- lm(Females$yrs.service~Females$rank)
+mod6b <- lm(Females$yrs.service~Females$rank)
 
-summary(mod7)
-summary(mod7b)
+summary(mod6)
+summary(mod6b)
 ```
-The result of these two summaries shows that according to this data set, Females actually obtain higher positions in less years than Males. for example, the average number of years in service for the associate professor rank for males is 9.7 years but only 8.96 for females. And, the average number of years in service for the professor rank for males is 20.89 for males and only 14.57 for females.
+The result of these two summaries shows that according to this data set, the Females actually obtained higher positions in less years of service than Males. For example, the average number of years in service for the associate professor rank for males is 9.7 years but only 8.96 for females. And, the average number of years in service for the professor rank for males is 20.89 years for males and only 14.57 for females.
 
-Checking if there is a difference in salaries between disciplines
+Checking if there is a difference in average salary amounts between disciplines
 ```{r}
 t.test(Salaries$salary[Salaries$discipline=="B"], Salaries$salary[Salaries$discipline=="A"], alternative="greater")
 ```
-This hypothesis test tells us that employees teaching in the applied departments (B) have higher average salaries than those in the theoretical departments (A).
+This hypothesis test tells us that employees teaching in the applied departments (B) have higher average salaries than those in the theoretical departments (A) by an average of about $10,000. This confirms what we saw initially from the box plot comparing the two disciplines.
+
+Investigating the relationship between salary and years of service
+```{r}
+plot(salary~yrs.service)
+
+mod7 <- lm(salary~yrs.service,data=Salaries)
+
+par(mfrow=c(2,2))
+plot(mod7)
+```
+We noticed that there appears to be a non-linear relationship between salary and yrs.service in the plot which is further present when looking at the residual plots because of the curvature.
+
+Checking for a potential log transformation
+```{r}
+summary(powerTransform(cbind(salary,yrs.service+1)))
+
+boxCox(mod7)
+```
+The boxCox and power transform functions recommend a log transformation for salary. We are also going to try a quadratic predictor term for yrs.service to address the non-linearity.
+
+```{r}
+mod8 <- lm(log(salary)~yrs.service+I(yrs.service^2))
+
+par(mfrow=c(2,2))
+plot(mod8)
+```
+The transformation and quadratic term seemed to improve the residual plots, fixing the curvature
+
+```{r}
+summary(mod8)
+```
+This model helped capture the downward curve that is present on the plot, where there is diminishing returns on salary as the number of years of service increases. The coefficient of the linear term is positive meaning that each additional year of service, salary increases. However, the quadratic term has a negative coefficient which suggests that the rate of salary growth slows as the years of service increase. After a certain point in the data, salary growth may plateau or decrease slightly. This can be seen below in the plot of the model's fitted values as well as 3 predictions using the model for 5, 25, and 50 years of service
+```{r}
+plot(mod8$fitted.values~yrs.service)
+```
+```{r}
+exp(predict(mod8,newdata=data.frame(yrs.service=5)))
+exp(predict(mod8,newdata=data.frame(yrs.service=25)))
+exp(predict(mod8,newdata=data.frame(yrs.service=50)))
+```
+
+Looking at the yrs.since.phd vs salary relationship:
+
+```{r}
+plot(log(salary)~yrs.since.phd)
+```
+We can see a similar trend here as in yrs.service, where there is a negative quadratic curve.
+
+fitting a model for yrs.since.phd similar to yrs.service
+```{r}
+mod9 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2))
+
+summary(mod9)
+
+par(mfrow=c(2,2))
+plot(mod9)
+```
+
+Creating a final model for making salary offers, based on all predictors except for sex
+```{r}
+mod10 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2)+yrs.service+I(yrs.service^2)+rank+discipline)
+
+summary(mod10)
+
+par(mfrow=c(2,2))
+plot(mod10)
+```
+Using the model to select a salary amount for a new faculty that is:
+
+An Assistant Professor
+in the 'Theoretical' department (A)
+0 years of service
+3 years since phd
+
+```{r}
+exp(predict(mod10,newdata=data.frame(rank="AsstProf", discipline="A", yrs.service=0, yrs.since.phd=3)))
+```
+Our model suggests a salary of $72,499.73
+
+
+Summary:
+
+We started by investigating for a potential gender gap in this data set, in which we discovered that Male faculty members make more on average than Females, in each of the three ranks. Although, this data set had a much greater number of total Male observations than Female, so additional testing could be required.
+
+We then started looking into other factors that had influential effects on the salary amounts of faculty.
+
+Although there was a gender gap present, we observed that based on this data, females were in higher ranking positions with less years of service than Male faculty.
+
+We also found that members of the applied departments (B) had, on average, higher salaries than those in the theoretical departments (A).
+
+Next, we noticed that there were non-linear relationships between both years of service and years since phd to salary amounts, where there were diminishing returns in salary growth the more years of service and the more years since phd.
+
+Finally, we fitted a final model to predict salary amounts based on all of the predictor variables (except sex because we found it to be biased in our data). This model could be used as a baseline for making offers of new faculty members, however we do not think it is entirely suitable based on the information provided.
