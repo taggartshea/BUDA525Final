@@ -260,9 +260,9 @@ The results of these calculations provide interesting results. They show that th
 
 ```{r}
 par(mfrow=c(1,3))
-plot(AsstProfessors$salary~AsstProfessors$sex)
-plot(AssocProfessors$salary~AssocProfessors$sex)
-plot(Professors$salary~Professors$sex)
+plot(AsstProfessors$salary~AsstProfessors$sex, main="Salary and Sex (Asst Prof)", col.main="#EAAA00",col="#EAAA00")
+plot(AssocProfessors$salary~AssocProfessors$sex, main="Salary and Sex (Assoc Prof)", col.main="#EAAA00",col="#EAAA00")
+plot(Professors$salary~Professors$sex, main="Salary and Sex (ALL)", col.main="#EAAA00",col="#EAAA00")
 ```
 
 Creating a model using a sex and rank interaction as the predictor
@@ -313,7 +313,7 @@ plot(salary~yrs.service)
 mod7 <- lm(salary~yrs.service,data=Salaries)
 
 par(mfrow=c(2,2))
-plot(mod7)
+plot(mod7,main="mod7", col.main="#002855",col="#EAAA00")
 ```
 We noticed that there appears to be a non-linear relationship between salary and yrs.service in the plot which is further present when looking at the residual plots because of the curvature.
 
@@ -329,7 +329,7 @@ The boxCox and power transform functions recommend a log transformation for sala
 mod8 <- lm(log(salary)~yrs.service+I(yrs.service^2))
 
 par(mfrow=c(2,2))
-plot(mod8)
+plot(mod8, main="mod8", col.main="#EAAA00",col="#002855")
 ```
 The transformation and quadratic term seemed to improve the residual plots, fixing the curvature
 
@@ -350,7 +350,7 @@ cat("\n", "salary for 50 years of service: ",exp(predict(mod8,newdata=data.frame
 Looking at the yrs.since.phd vs salary relationship:
 
 ```{r}
-plot(log(salary)~yrs.since.phd)
+plot(log(salary)~yrs.since.phd, main="log(salary) and years since phd", col.main="#EAAA00",col="#002855")
 ```
 We can see a similar trend here as in yrs.service, where there is a negative quadratic curve.
 
@@ -361,7 +361,7 @@ mod9 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2))
 summary(mod9)
 
 par(mfrow=c(2,2))
-plot(mod9)
+plot(mod9, main="mod9", col.main="#002855",col="#EAAA00")
 ```
 
 Creating a final model for making salary offers, based on all predictors except for sex
@@ -371,7 +371,7 @@ mod10 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2)+yrs.service+I(yrs.servi
 summary(mod10)
 
 par(mfrow=c(2,2))
-plot(mod10)
+plot(mod10, main="mod10)", col.main="#EAAA00",col="#002855")
 ```
 Using the model to select a salary amount for a new faculty that is:
 
