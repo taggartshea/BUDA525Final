@@ -1,0 +1,402 @@
+---
+title: "BUDA525Final"
+output: html_document
+Team Members: Kristen Hopkins, Jacob Sossamon, Taggart Shea
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 3 (30 Points)
+
+#In the `Credit` data in the `ISLR` package it contains 400 customers and information on their credit history. For full information of the data look at the `help` file. A company has approached us to better understand factors that influence the `Balance` variable which is average credit card balance in USD. Using the information in the model discuss the influential factors, and discuss the factors you choose to put in the model. Do you have any concerns about the use of certain variables in the model? Discuss how your model was created and any insights you can provide based on the results. HINT: Adding Gender and/or Ethnicity could be controversial or illegal in some uses of this this model you should discuss your decision on these variables and how it effects the organizations ability to use your model for prediction or inference.
+
+Exploring the data
+```{r}
+library(ISLR)
+data("Credit")
+help(Credit)
+head(Credit)
+summary(Credit)
+plot(Credit, main="Credit", col.main="#EAAA00",col="#002855")
+```
+From plotting the credit data, we can immediately see that the rating and limit appear to be visibly positively correlated with balance. There could be some multicollinearity concerns though, with having both the limit and rating variables in the model, since they look almost perfectly correlated with each other. This is understandable as individuals with higher credit scores usually have higher credit limits.
+
+We are going to remove the ID, Gender, and Ethnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be already biased against gender or ethnicity, so its best to just leave them out completely.
+
+It is also possible that some of the variables may need transformed such as the limit and balance variables where there is a fairly wide range of values.
+
+We noticed that a substantial portion of the data set has balance values of 0. We are going to take a look at how many balances are averaged at 0 and view the distribution of the balance variable.
+```{r}
+par(mfrow=c(1,1))
+hist(Credit$Balance, main= "Histogram of avg CC balance in $", col.main="#002855", col.lab="#002855", xlab = "Avg CC balance in $$", col="#EAAA00")
+
+#seeing number of rows with balances of $0
+nrow(Credit[Credit$Balance == 0,])
+```
+As you can see, almost a quarter of the data set has balances with values of 0. As a result, we are going to exclude all of the averaged out balances with values of 0 since the large number of these present in our data could negatively impact our models and skew results.
+
+Our understanding is that the balance variable is calculated as an average of the highest amount incurred on a credit card in a given month across a period, regardless of whether the balance was paid in full at the end of each month. Thus, balances of $0 would represent cards with no charges at all for the entire period. For a credit card company, it is intuitive to exclude these balances because they would most likely be interested in knowing the average balances across their frequent users, not inactive users who have not used their cards in a significant amount of time, leading them to have averaged out balances of 0 for the period. If we are trying to understand the influential factors that effect credit card balances, inactive users with no charges on their cards are not useful to us.
+
+```{r}
+attach(Credit)
+```
+
+Removing unwanted columns and removing all of the balances with 0.
+```{r}
+Credit <- subset(Credit, select = -c(Ethnicity, Gender, ID))
+
+Credit <- Credit[Credit$Balance > 0, ]
+
+attach(Credit)
+
+hist(Credit$Balance,, main= "Histogram of avg CC balance in $ (no $0 balances or unwanted columns)", col.main="#002855", col.lab="#002855", xlab = "Avg CC balance in $$", col="#EAAA00")
+```
+This histogram shows balances that are a lot more evenly distributed, which will hopefully make our model more accurate.
+
+Performing backwards elimination with AIC:
+
+Default Model (all predictor variables, no transformations)
+```{r}
+#model using ALL predictor variables
+mod1 <- lm(Balance~Income+Limit+Rating+Cards+Age+Education+Student+Married)
+
+
+#backwards selection on model 1
+
+#AIC
+mod1S <- step(mod1)
+#BIC
+mod1SB <-step(mod1, k=log(100))
+```
+
+```{r}
+summary(mod1S)
+summary(mod1SB)
+```
+
+mod1S gives us an AIC of 1462.3 and tells us the best model we can come up with uses all variables except for education. Using mod1SB to look at the BIC, it tells us to remove both married and education variables. But, because its score is higher at 1481.7 and we think that the married variable might contribute to our model, we decided to keep it for now. 
+
+Looking at the summary of mod1S, all other variables are significant at the .05 level or better except for Married at 0.1. The adjusted r squared value is 0.99
+
+Using an automatic selection of transformation and boxCox to see if any log transformations would help our model.
+```{r}
+library(car)
+
+summary(powerTransform(cbind(Balance,Rating,Limit,Income,Cards,Age,Education)))
+
+boxCox(mod1S)
+```
+In the powertransform table, none of the estimated power bounds are close to zero. And for the boxCox graph, The log-likelihood bound does not fall around 0 either. This tells us that no log transformations would improve our model.
+
+Looking at the residuals
+```{r}
+#the backwards elimination model using AIC
+par(mfrow=c(2,2))
+plot(mod1S, col.main="#EAAA00", col.lab="#EAAA00", main = "mod1S Residuals", col="#002855")
+```
+The residuals for our model appear to be pretty randomly distributed around 0 as well as being normally distributed.
+
+Next, we are going to remove one of the highly correlated variables (rating or limit), because of our multicollinearity concerns of these two variables being perfectly correlated. In this case we decided to drop the credit rating variable. It had less significance in our initial model and we believe that someones credit limit would effect their spending more than their rating anyway.
+```{r}
+mod2 <- lm(Balance~Income+Limit+Cards+Age+Student+Married) 
+
+summary(mod1S)
+summary(mod2)
+```
+The output of mod2 seems to be very similar to mod1S, just with slightly different coefficients, and this time the married variable has more significance on the model at 0.05 instead of 0.1. The standard errors are also slightly less. Hopefully by removing one of the highly correlated variables, the model will have better interpretability and more reliable coefficient estimates.
+
+Checking the residauls again after removing rating.
+```{r}
+par(mfrow=c(2,2))
+plot(mod2, main= "mod2", col.main="#002855", col = "#EAAA00", col.lab="#002855")
+plot(mod1S, main="mod1S", col.main="#EAAA00", col= "#002855", col.lab="#EAAA00")
+```
+We can see our residuals for mod2 look just as good. 
+
+Now we are going to try to clean up the residual plots of mod2 even more (data point 247 and 192 have very high balances, which could be influencing the model and the residual plots line slightly)
+```{r}
+Credit[247,]
+Credit[192,]
+
+Credit <- Credit[-247,]
+Credit <- Credit[-192,]
+```
+Fitting model after removing those two rows:
+```{r}
+attach(Credit)
+
+mod3 <- lm(Balance~Income+Limit+Cards+Age+Student+Married) 
+
+summary(mod3)
+```
+The residual spread tightened slightly from -34.4 - 23.9 to -28.2 - 23.9 by removing those two points (not necessary but we thought we might as well experiment)
+
+```{r}
+par(mfrow=c(1,2))
+residualPlot(mod2, main="mod2 Residual Plot", col.main="#EAAA00", col= "#002855", col.lab="#EAAA00")
+residualPlot(mod3, main="mod3 Residual Plot", col.main="#002855", col = "#EAAA00", col.lab="#002855")
+```
+You can see the two points in the bottom right corner went away in the mod3 which improved the slight curve of the line we had before in mod2. 
+
+Using anova to seeing if we can remove even more predictor variables to have a simpler model:
+```{r}
+#Submodel without Age and Married variables
+mod4 <- lm(Balance~Income+Limit+Cards+Student)
+
+anova(mod4,mod3)
+```
+Based on the anova table comparing model 4 (submodel removing student and married variables) and model 3 , we see that we can reject the null hypothesis of the simpler model being better in this case because the p value is very small, thus telling us that the Student and Married variables should stay in the model.
+
+Summary:
+
+We chose to use backwards elimination to select the best predictors for our model. it provided us with a model that used the variables  Income, Limit, Rating, Cards, Age, Student, and Married. We then manually removed Rating since Limit essentially already accounts for all that Rating offers. We then took away two potential influence points to clean up our residuals even more to give us our final model. Finally we tested if we could simplify the model any further by removing two variables and found that we should not.
+
+Interpretation of final model:
+
+```{r}
+summary(mod3)
+```
+Our model allows us to view the influential factors that affect credit card balances for this particular set of data. We can also see what specific effects the predictor variables have on balance by looking at the coefficients. 
+
+The income variable has a negative correlation on balance, which seems somewhat counter-intuitive. We would assume the more income you have, the more you would spend leading to higher average credit card balances. Our only guess here is maybe wealthier people can rely on other means of spending, and are not so reliant on revolving credit.
+
+Next we have Limit, where a higher credit limit results in a higher card balance. This definitely makes sense to us, the higher your limit the more you can spend. It could also reflect that banks give higher limits to those who tend to spend more.
+
+For the card variable, our model tells us that the more cards someone has, the higher their average card balance will be, across all cards. This suggests that people with more credit cards tend to spend more, maybe due to the increased access to credit this gives, or those with more financial freedom tend to use more banking institutions.
+
+For age, the older the person is, the less their average credit card balance will be, indicating that younger people may tend to spend more on average, or older adults may have more financial stability, less need to rely on credit, or a more conservative spending behavior.
+
+The student coefficient value tell us that students generally have higher card balances. This could be due to the additional expenses like tuition or that they have a heavier reliance on credit to finance any expenses, because of lower income.
+
+Finally, we see that married people tend to have lower balances. This one could be due to a married couple dividing their total household spending among two people.
+
+Our final model appears to be a very good fit for the data and useful in understanding influential factors of average credit card balances.
+
+Prediction example:
+
+To test our model we are going to predict a card balance for someone that: 
+Has $100,000 income
+An $8,000 credit limit
+2 Cards
+Is 35 years old
+Is not a student
+Is not Married
+```{r}
+predict(mod3,newdata=data.frame(Income=100, Limit=8000, Cards=2, Age=35, Student="No", Married="No"))
+```
+The model predicts that this individual would have an averaged out credit card balance of $927.1 for the period.
+
+
+
+
+
+
+
+
+## Problem 4 (30 Points)
+
+The `Salaries` data in the `carData` package contains information on academic salaries in 2008 and 2009 in a college in the US. A data dictionary can be found in the `help` file for the data. This data was collected as part of an on-going effort of the college to monitor salary differences between male and female faculty members. We have been asked to investigate the gender gap in the data, but also what other information that may be relevant to administrators (i.e. salary growth for years of service, discipline based growth, etc). Investigate if there is a gender gap, but also provide insights on other drivers that you may see of salary in the data. Is your model suitable to make offers based on the information provided? Explain your reasoning. Provide insights into any other information you find of interest.
+
+Exploring the data
+```{r}
+library(carData)
+data("Salaries")
+help(Salaries)
+summary(Salaries)
+head(Salaries)
+plot(Salaries, main="Salaries", col.main="#EAAA00",col="#002855")
+```
+Some potential concerns right away that we see from the data set is that there are 358 male observations and only 39 female. Also there is a lot more observations with 'professor' ranks at 266 than 'assistant' and 'associate professor' at 67 and 64 in the data set.
+
+Another concern could be with the strong correlation between yrs.service and yrs.since.phd, suggesting multicolinearity could be an issue like with the previous problem, if both of these variables are left in the model.
+
+```{r}
+attach(Salaries)
+```
+
+
+```{r}
+par(mfrow=c(1,3))
+plot(salary~rank, main="Salary and Rank", col.main="#EAAA00",col="#002855")
+plot(salary~discipline, main="Salary and Discipline", col.main="#002855", col="#EAAA00") 
+plot(salary~sex, main="Salary and Sex", col.main="#EAAA00",col="#002855")
+```
+Here we can see the pay differences between the 3 ranks, the 2 disciplines, and gender
+
+Investigating the gender gap:
+
+Splitting data into different subsets
+```{r}
+SalariesRank <- split(Salaries, rank)
+
+#creating different subsets for each rank
+Professors <- SalariesRank$Prof
+AsstProfessors <- SalariesRank$AsstProf
+AssocProfessors <- SalariesRank$AssocProf
+
+SalariesSex <- split(Salaries, sex)
+
+#creating different subsets for Male and Female observations
+Males <- SalariesSex$Male
+Females <- SalariesSex$Female
+```
+
+Calculating the means of each rank by sex
+```{r}
+cat("Assistant Professors","\n")
+tapply(AsstProfessors$salary,AsstProfessors$sex,mean)
+
+cat("\n","Associate Professors","\n")
+tapply(AssocProfessors$salary,AssocProfessors$sex,mean)
+
+cat("\n","Professors","\n")
+tapply(Professors$salary,Professors$sex,mean)
+```
+The results of these calculations provide interesting results. They show that there is at least a $3,000 difference between the averages of male salaries and female salaries in each of the 3 ranks, indicating a gender pay gap may be present. You can see this visually in the 3 boxplots below.
+
+```{r}
+par(mfrow=c(1,3))
+plot(AsstProfessors$salary~AsstProfessors$sex, main="Rank and Salary (Asst Prof)", col.main="#EAAA00",col="#002855")
+plot(AssocProfessors$salary~AssocProfessors$sex, main="Rank and Salary (Assoc Prof)", col.main="#002855",col="#EAAA00")
+plot(Professors$salary~Professors$sex, main="Rank and Salary (ALL)", col.main="#EAAA00",col="#002855")
+```
+
+Creating a model using a sex and rank interaction as the predictor
+```{r}
+mod5 <- lm(salary~sex*rank, data=Salaries)
+
+summary(mod5)
+```
+Again we see that from this model that its estimates are that in every rank, males make more in comparison to females.
+
+Performing a t-test hypothesis test similar to the model we just looked at
+```{r}
+t.test(Salaries$salary[Salaries$sex=="Male"], Salaries$salary[Salaries$sex=="Female"], alternative="greater")
+```
+The t-test shows that males on average have $14,088 higher salaries than females. The hypothesis test tells us that if the null hypothesis were true and there was no real difference between male and female salaries, the probability of observing a value as extreme as our data would be 0.001, indicating we should reject the null hypothesis and recognize the higher average salary of males in this case.
+
+Interpretation: 
+
+Looking at the means, box plots, regression model, and t-test, we would say that a gender gap does indeed exist within this data. This discrepancy persists even when the different ranks of the faculty members are taken into account. There was a visible salary gap between male and female faculty in the Assistant Professor, Associate Professor, and Professor ranks.
+
+
+
+Looking at other factors:
+
+Investigating if there is a promotion discrepancy by creating two models for predicting the number of years someone has been there based on what rank they are, by sex
+```{r}
+#for Males
+mod6 <- lm(Males$yrs.service~Males$rank)
+
+#for Females
+mod6b <- lm(Females$yrs.service~Females$rank)
+
+summary(mod6)
+summary(mod6b)
+```
+The result of these two summaries shows that according to this data set, the Females actually obtained higher positions in less years of service than Males. For example, the average number of years in service for the associate professor rank for males is 9.7 years but only 8.96 for females. And, the average number of years in service for the professor rank for males is 20.89 years for males and only 14.57 for females.
+
+Checking if there is a difference in average salary amounts between disciplines
+```{r}
+t.test(Salaries$salary[Salaries$discipline=="B"], Salaries$salary[Salaries$discipline=="A"], alternative="greater")
+```
+This hypothesis test tells us that employees teaching in the applied departments (B) have higher average salaries than those in the theoretical departments (A) by an average of about $10,000. This confirms what we saw initially from the box plot comparing the two disciplines.
+
+Investigating the relationship between salary and years of service
+```{r}
+par(mfrow=c(1,1))
+plot(salary~yrs.service, main="Salary and Years Service", col.main="#EAAA00",col="#002855")
+
+mod7 <- lm(salary~yrs.service,data=Salaries)
+
+par(mfrow=c(2,2))
+plot(mod7,main="Rank and Salary (Asst Prof)", col.main="#002855",col="#EAAA00")
+```
+We noticed that there appears to be a non-linear relationship between salary and yrs.service in the plot which is further present when looking at the residual plots because of the curvature.
+
+Checking for a potential log transformation
+```{r}
+summary(powerTransform(cbind(salary,yrs.service+1)))
+
+boxCox(mod7)
+```
+The boxCox and power transform functions recommend a log transformation for salary. We are also going to try a quadratic predictor term for yrs.service to address the non-linearity.
+
+```{r}
+mod8 <- lm(log(salary)~yrs.service+I(yrs.service^2))
+
+par(mfrow=c(2,2))
+plot(mod8, main="log(salary) and years service transformed", col.main="#EAAA00",col="#002855")
+```
+The transformation and quadratic term seemed to improve the residual plots, fixing the curvature
+
+```{r}
+summary(mod8)
+```
+This model helped capture the downward curve that is present on the plot, where there is diminishing returns on salary as the number of years of service increases. The coefficient of the linear term is positive meaning that each additional year of service, salary increases. However, the quadratic term has a negative coefficient which suggests that the rate of salary growth slows as the years of service increase. After a certain point in the data, salary growth may plateau or decrease slightly. This can be seen below in the plot of the model's fitted values as well as 3 predictions using the model for 5, 25, and 50 years of service
+```{r}
+par(mfrow=c(1,1))
+plot(mod8$fitted.values~yrs.service, main="Fitted Values and Years Service", col.main="#002855",col="#EAAA00")
+```
+```{r}
+exp(predict(mod8,newdata=data.frame(yrs.service=5)))
+exp(predict(mod8,newdata=data.frame(yrs.service=25)))
+exp(predict(mod8,newdata=data.frame(yrs.service=50)))
+```
+
+Looking at the yrs.since.phd vs salary relationship:
+
+```{r}
+plot(log(salary)~yrs.since.phd, main="log(salary) and years of Service", col.main="#EAAA00",col="#002855")
+```
+We can see a similar trend here as in yrs.service, where there is a negative quadratic curve.
+
+fitting a model for yrs.since.phd similar to yrs.service
+```{r}
+mod9 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2))
+
+summary(mod9)
+
+par(mfrow=c(2,2))
+plot(mod9, main="Salary and Years Since phd", col.main="#002855",col="#EAAA00")
+```
+
+Creating a final model for making salary offers, based on all predictors except for sex
+```{r}
+mod10 <- lm(log(salary)~yrs.since.phd+I(yrs.since.phd^2)+yrs.service+I(yrs.service^2)+rank+discipline)
+
+summary(mod10)
+
+par(mfrow=c(2,2))
+plot(mod10, main="Salary and everything else (except sex)", col.main="#EAAA00",col="#002855")
+```
+Using the model to select a salary amount for a new faculty that is:
+
+An Assistant Professor
+in the 'Theoretical' department (A)
+0 years of service
+3 years since phd
+
+```{r}
+exp(predict(mod10,newdata=data.frame(rank="AsstProf", discipline="A", yrs.service=0, yrs.since.phd=3)))
+```
+Our model suggests a salary of $72,499.73
+
+
+Summary:
+
+We started by investigating for a potential gender gap in this data set, in which we discovered that Male faculty members make more on average than Females, in each of the three ranks. Although, this data set had a much greater number of total Male observations than Female, so additional testing could be required.
+
+We then started looking into other factors that had influential effects on the salary amounts of faculty.
+
+Although there was a gender gap present, we observed that based on this data, females were in higher ranking positions with less years of service than Male faculty.
+
+We also found that members of the applied departments (B) had, on average, higher salaries than those in the theoretical departments (A).
+
+Next, we noticed that there were non-linear relationships between both years of service and years since phd to salary amounts, where there were diminishing returns in salary growth the more years of service and the more years since phd.
+
+Finally, we fitted a final model to predict salary amounts based on all of the predictor variables (except sex because we found it to be biased in our data). This model could be used as a baseline for making offers of new faculty members, however we do not think it is entirely suitable based on the information provided.
