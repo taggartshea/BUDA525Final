@@ -23,7 +23,7 @@ head(Credit)
 summary(Credit)
 plot(Credit, main="Credit", col.main="#EAAA00",col="#002855")
 ```
-From plotting the credit data, we can immediately see that the rating and limit appear to be visibly positively correlated with balance. There could be some multicollinearity concerns though, with having both the limit and rating variables in the model, since they look almost perfectly correlated with each other. This is understandable as individuals with higher credit scores usually have higher credit limits.
+From plotting the credit data, we can immediately see that the rating and limit variables appear to be visibly positively correlated with balance. There could be some multicollinearity concerns though, with having both the limit and rating variables in the model, since they look almost perfectly correlated with each other. This is understandable as individuals with higher credit scores usually have higher credit limits.
 
 We are going to remove the ID, Gender, and Ethnicity variables from contention in our models because ID will be useless and gender and ethnicity could create ethical or legal problems if our models are using them to predict balances. The data we are using to train these models could be already biased against gender or ethnicity, so its best to just leave them out completely.
 
@@ -55,7 +55,7 @@ attach(Credit)
 
 hist(Credit$Balance,, main= "Histogram of avg CC balance in $ (no $0 balances or unwanted columns)", col.main="#002855", col.lab="#002855", xlab = "Avg CC balance in $$", col="#EAAA00")
 ```
-This histogram shows balances that are a lot more evenly distributed, which will hopefully make our model more accurate.
+After removing the 0 balances, this histogram shows balances that are a lot more evenly distributed, which will hopefully make our model more accurate.
 
 Performing backwards elimination with AIC:
 
@@ -271,13 +271,13 @@ mod5 <- lm(salary~sex*rank, data=Salaries)
 
 summary(mod5)
 ```
-Again we see that from this model that its estimates are that in every rank, males make more in comparison to females.
+Again we see that in this model, its estimates are that in every rank, males make more on average in comparison to females. For males in the professor rank its \$1,892 above females, in the associate professor rank its \$3,095 above females, and in the assistant professor rank it is \$3,262 above females.
 
 Performing a t-test hypothesis test similar to the model we just looked at
 ```{r}
 t.test(Salaries$salary[Salaries$sex=="Male"], Salaries$salary[Salaries$sex=="Female"], alternative="greater")
 ```
-The t-test shows that males on average have $14,088 higher salaries than females. The hypothesis test tells us that if the null hypothesis were true and there was no real difference between male and female salaries, the probability of observing a value as extreme as our data would be 0.001, indicating we should reject the null hypothesis and recognize the higher average salary of males in this case.
+The t-test shows that males on average have $14,088 higher salaries than females across the entire data set. The hypothesis test tells us that if the null hypothesis were true and there was no real difference between male and female salaries, the probability of observing a value as extreme as our data would be 0.001, indicating we should reject the null hypothesis and recognize the higher average salary of males in this case.
 
 Interpretation: 
 
@@ -340,10 +340,11 @@ This model helped capture the downward curve that is present on the plot, where 
 ```{r}
 plot(mod8$fitted.values~yrs.service)
 ```
+
 ```{r}
-exp(predict(mod8,newdata=data.frame(yrs.service=5)))
-exp(predict(mod8,newdata=data.frame(yrs.service=25)))
-exp(predict(mod8,newdata=data.frame(yrs.service=50)))
+cat("salary for 5 years of service: ", exp(predict(mod8,newdata=data.frame(yrs.service=5))))
+cat("\n", "salary for 25 years of service: ", exp(predict(mod8,newdata=data.frame(yrs.service=25))))
+cat("\n", "salary for 50 years of service: ",exp(predict(mod8,newdata=data.frame(yrs.service=50))))
 ```
 
 Looking at the yrs.since.phd vs salary relationship:
@@ -397,4 +398,4 @@ We also found that members of the applied departments (B) had, on average, highe
 
 Next, we noticed that there were non-linear relationships between both years of service and years since phd to salary amounts, where there were diminishing returns in salary growth the more years of service and the more years since phd.
 
-Finally, we fitted a final model to predict salary amounts based on all of the predictor variables (except sex because we found it to be biased in our data). This model could be used as a baseline for making offers of new faculty members, however we do not think it is entirely suitable based on the information provided.
+Finally, we fitted a final model to predict salary amounts based on all of the predictor variables (except sex because we found it to be biased in our data). This model could be used as a baseline for making offers of new faculty members, however we do not think it is entirely suitable to use alone based on the information provided.
