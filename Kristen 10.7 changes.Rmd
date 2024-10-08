@@ -351,7 +351,7 @@ exp(predict(mod8,newdata=data.frame(yrs.service=50)))
 Looking at the yrs.since.phd vs salary relationship:
 
 ```{r}
-plot(log(salary)~yrs.since.phd, main="log(salary) and years of Service", col.main="#EAAA00",col="#002855")
+plot(log(salary)~yrs.since.phd, main="log(salary) and years since phd", col.main="#EAAA00",col="#002855")
 ```
 We can see a similar trend here as in yrs.service, where there is a negative quadratic curve.
 
